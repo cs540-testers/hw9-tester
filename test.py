@@ -1,18 +1,19 @@
 __author__ = 'cs540-testers'
 __credits__ = ['Harrison Clark', 'Stephen Jasina', 'Saurabh Kulkarni',
 		'Alex Moon']
-version = 'v0.1'
+version = 'v0.1' 
+# TODO: set this to 1.0 once you've independently confirmed output vals
 
 import unittest
 import io
 import intro_keras
 import sys
 import numpy as np
-import numpy.testing
+from tensorflow import keras
 
-class TestRegression(unittest.TestCase):
+class TestIntroKeras(unittest.TestCase):
 
-    BODYFAT_FILE = 'bodyfat.csv'
+
     def test_get_dataset(self):
         (train_images, train_labels) = intro_keras.get_dataset()
         (test_images, test_labels) = intro_keras.get_dataset(training=False)
@@ -52,79 +53,107 @@ class TestRegression(unittest.TestCase):
         + "8. Eight - 5851\n"\
         + "9. Nine - 5949\n"
         self.assertEqual(output, expectedoutput)
-"""
-    def test_regression(self):
-        dataset = regression.get_dataset(self.BODYFAT_FILE)
 
-        mse = regression.regression(dataset, cols=[2,3], betas=[0,0,0])
-        numpy.testing.assert_almost_equal(mse, 418.50384920634923, 7)
+    def test_build_model(self):
+        # TODO: use model.get_layer to check layers?
+        # Kinda checked in train_model
+        model = intro_keras.build_model()
+        self.assertEqual(model.__class__.__name__, "Sequential")
+        self.assertEqual(model.loss.__class__.__name__, "SparseCategoricalCrossentropy")
+        self.assertEqual(model.optimizer.__class__.__name__, "SGD")
+        self.assertEqual(model.metrics_names, []) #should be empty before fit() is called
 
-        mse = regression.regression(dataset, cols=[2,3,4], betas=[0,-1.1,-.2,3])
-        numpy.testing.assert_almost_equal(mse, 11859.17408611111, 7)
 
-    def test_gradient_descent(self):
-        dataset = regression.get_dataset(self.BODYFAT_FILE)
-
-        grad_desc = regression.gradient_descent(dataset, cols=[2,3], betas=[0,0,0])
-        numpy.testing.assert_almost_equal(grad_desc, np.array([-37.87698413, -1756.37222222, -7055.35138889]))
-
-    def test_iterate_gradient(self):
-        dataset = regression.get_dataset(self.BODYFAT_FILE)
+    
+    def test_train_model(self):
+        (train_images, train_labels), (
+        test_images, test_labels) = keras.datasets.mnist.load_data()
+        model = intro_keras.build_model()
         capturedOutput = io.StringIO()
         sys.stdout = capturedOutput
-        regression.iterate_gradient(dataset, cols=[1,8], betas=[400,-400,300], T=10, eta=1e-4)
-
+        intro_keras.train_model(model, train_images, train_labels, 10)
         output = capturedOutput.getvalue()
-        output_lines = output.split('\n')
         sys.stdout = sys.__stdout__
 
-        expected_lines = ["1 423085332.40 394.45 -405.84 -220.18",
-        "2 229744495.73 398.54 -401.54 163.14",
-        "3 124756241.68 395.53 -404.71 -119.33",
-        "4 67745350.04 397.75 -402.37 88.82",
-        "5 36787203.39 396.11 -404.09 -64.57",
-        "6 19976260.50 397.32 -402.82 48.47",
-        "7 10847555.07 396.43 -403.76 -34.83",
-        "8 5890470.68 397.09 -403.07 26.55",
-        "9 3198666.69 396.60 -403.58 -18.68",
-        "10 1736958.93 396.96 -403.20 14.65"]
-
-        for out_line, exp_line in zip(output_lines, expected_lines):
-            self.assertEqual(out_line.rstrip(), exp_line)
-
-    def test_compute_betas(self):
-        dataset = regression.get_dataset(self.BODYFAT_FILE)
-        betas = regression.compute_betas(dataset, [1,2])
-
-        np.testing.assert_almost_equal(betas[0], 1.4029395600144443)
-        np.testing.assert_almost_equal(betas[1], 441.3525943592249)
-        np.testing.assert_almost_equal(betas[2], -400.5954953685588)
-        np.testing.assert_almost_equal(betas[3], 0.009892204826346139)
-
-    def test_predict(self):
-        dataset = regression.get_dataset(self.BODYFAT_FILE)
-        prediction = regression.predict(dataset, cols=[1,2], features=[1.0708, 23])
-        np.testing.assert_almost_equal(prediction, 12.62245862957813)
-
-    def test_sgd(self):
-        dataset = regression.get_dataset(self.BODYFAT_FILE)
+        expected_summary = [
+            "_________________________________________________________________",
+            "Layer (type)                 Output Shape              Param #   ",
+            "=================================================================",
+            "flatten_3 (Flatten)          (32, 784)                 0         ",
+            "_________________________________________________________________",
+            "dense_9 (Dense)              (32, 128)                 100480    ",
+            "_________________________________________________________________",
+            "dense_10 (Dense)             (32, 64)                  8256      ",
+            "_________________________________________________________________",
+            "dense_11 (Dense)             (32, 10)                  650       ",
+            "=================================================================",
+            "Total params: 109,386",
+            "Trainable params: 109,386",
+            "Non-trainable params: 0",
+            "_________________________________________________________________",
+            ""]
         capturedOutput = io.StringIO()
         sys.stdout = capturedOutput
-        regression.sgd(dataset, cols=[2,3], betas=[0,0,0], T=5, eta=1e-6)
-
+        model.summary()#prints to stdio
         output = capturedOutput.getvalue()
-        output_lines = output.split('\n')
         sys.stdout = sys.__stdout__
 
-        expected_lines = ["1 387.33 0.00 0.00 0.00",
-        "2 379.60 0.00 0.00 0.01",
-        "3 335.99 0.00 0.00 0.01",
-        "4 285.89 0.00 0.00 0.02",
-        "5 245.75 0.00 0.01 0.03"]
+        # remove model name because it's numbered
+        summary_lines = output.split('\n')[1:]
 
-        for out_line, exp_line in zip(output_lines, expected_lines):
-            self.assertEqual(out_line.rstrip(), exp_line)
+        for i, (ref, real) in enumerate(zip(expected_summary, summary_lines)):
+            if i in (3,5,7,9):
+                # layer names are numbered according to the order
+                # you run the tests in
+                ref = "".join(ref.split(" ")[1:])
+                real = "".join(real.split(" ")[1:])
+            self.assertEqual(ref.rstrip(), real.rstrip())
 
-"""
+
+    
+    def test_evaluate_model(self):
+        capturedOutput = io.StringIO()
+        sys.stdout = capturedOutput
+        (train_images, train_labels), (
+        test_images, test_labels) = keras.datasets.mnist.load_data()
+        model = intro_keras.build_model()
+        intro_keras.train_model(model, train_images, train_labels, 10)
+        intro_keras.evaluate_model(model, test_images, test_labels)
+        output = capturedOutput.getvalue()
+        sys.stdout = sys.__stdout__
+
+        # splice only the evaluate part
+        summary_lines = output.split('\n')[21:]
+        loss_line = summary_lines[0]
+        loss = float(loss_line.split(":")[1].strip())
+        self.assertAlmostEqual(loss, 0.2, delta=0.05)
+        accuracy_line = summary_lines[1]
+        accuracy = float(accuracy_line.split(":")[1].strip().strip('%'))
+        self.assertAlmostEqual(accuracy, 94.5, delta=1.0)
+
+
+
+    def test_predict_label(self):
+        capturedOutput = io.StringIO()
+        sys.stdout = capturedOutput
+
+        (train_images, train_labels), (
+        test_images, test_labels) = keras.datasets.mnist.load_data()
+        model = intro_keras.build_model()
+        intro_keras.train_model(model, train_images, train_labels, 10)
+        intro_keras.evaluate_model(model, test_images, test_labels)
+        model.add(keras.layers.Softmax())
+        intro_keras.predict_label(model, test_images, 1)
+
+        output = capturedOutput.getvalue().split('\n')
+        sys.stdout = sys.__stdout__
+
+        # splice out the non-prediction stuff
+        output = output[23:]
+
+        best_pred = output[0].split(':')[0]
+        self.assertEqual(best_pred, "Two")
+
+    
 if __name__ == "__main__":
     unittest.main()
