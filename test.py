@@ -1,7 +1,7 @@
 __author__ = 'cs540-testers'
 __credits__ = ['Harrison Clark', 'Stephen Jasina', 'Saurabh Kulkarni',
 		'Alex Moon']
-__version__ = '1.0'
+__version__ = '1.1'
 
 # Suppress GPU warnings
 import os
