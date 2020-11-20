@@ -133,4 +133,7 @@ bodyfat.csv
 #hw9 stuff
 setup_output.txt
 intro_keras.py
-
+hw*.zip
+bin/
+lib64
+pyvenv.cfg
