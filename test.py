@@ -107,8 +107,12 @@ class TestIntroKeras(unittest.TestCase):
         captured_output = io.StringIO()
         with contextlib.redirect_stdout(captured_output):
             train_model(model, train_images, train_labels, 10)
-        self.assertEqual(captured_output.getvalue().split('\n')[0],
-                'Train on 60000 samples')
+        output_lines = captured_output.getvalue().split('\n')
+        self.assertEqual(len(output_lines), 21,
+                'Incorrect number of lines printed')
+        self.assertEqual(output_lines[-1], '', 'Output should end in newline')
+        for i in range(10):
+            self.assertEqual(output_lines[2 * i], 'Epoch {:d}/10'.format(i + 1))
 
         # If this test fails, you can probably(?) comment it out
         self.assertEqual(model.metrics_names, ['loss', 'accuracy'])
